@@ -432,7 +432,7 @@ function stepHour(delta){
 }
 function refreshPatientSelect(){
   const sel = document.getElementById('sel-paciente');
-  sel.innerHTML = pacientesCache.map(p => `<option value="${p.id}">${p.nombre} ${p.apellido}</option>`).join('');
+  sel.innerHTML = pacientesCache.filter(p => p.activo !== false).map(p => `<option value="${p.id}">${p.nombre} ${p.apellido}</option>`).join('');
 }
 function guardarSesion(){
   const fecha = document.getElementById('sel-fecha').value;
@@ -514,8 +514,8 @@ function renderPacientes(){
   const q = (document.getElementById('buscar-paciente')?.value || '').toLowerCase();
   const list = document.getElementById('pacientes-list');
   const esAdmin = currentUserData && currentUserData.rol === 'admin';
-  const filtrados = pacientesCache.filter(p => (p.nombre+' '+p.apellido).toLowerCase().includes(q));
-  if(filtrados.length === 0){ list.innerHTML = '<div class="empty-msg">No hay pacientes cargados.</div>'; return; }
+  const filtrados = pacientesCache.filter(p => p.activo !== false && (p.nombre+' '+p.apellido).toLowerCase().includes(q));
+  if(filtrados.length === 0){ list.innerHTML = '<div class="empty-msg">No hay pacientes activos cargados.</div>'; return; }
   list.innerHTML = filtrados.map(p => `
     <div class="patient-row">
       <div class="name">${p.nombre} ${p.apellido}</div>
@@ -568,7 +568,7 @@ function guardarPaciente(){
     convenio: document.getElementById('pac-convenio').checked
   };
   const id = document.getElementById('pac-id').value;
-  const promise = id ? db.collection('pacientes').doc(id).update(data) : db.collection('pacientes').add({...data, createdAt: new Date().toISOString()});
+  const promise = id ? db.collection('pacientes').doc(id).update(data) : db.collection('pacientes').add({...data, activo:true, createdAt: new Date().toISOString()});
   promise.then(() => { cerrarModalPaciente(); toast('✅ Paciente guardado'); }).catch(e => alert('Error: ' + e.message));
 }
 function borrarPaciente(id){
@@ -641,7 +641,7 @@ function cargarAgenda(){
 }
 function abrirModalAgenda(){
   document.getElementById('ag-tipo').innerHTML = '<option value="">— Sin especificar —</option>' + TODAS_SESIONES.map(s => `<option>${s}</option>`).join('');
-  document.getElementById('ag-paciente').innerHTML = '<option value="">— Sin paciente —</option>' + pacientesCache.map(p => `<option value="${p.id}">${p.nombre} ${p.apellido}</option>`).join('');
+  document.getElementById('ag-paciente').innerHTML = '<option value="">— Sin paciente —</option>' + pacientesCache.filter(p => p.activo !== false).map(p => `<option value="${p.id}">${p.nombre} ${p.apellido}</option>`).join('');
   document.getElementById('ag-dia').value = 'Lunes';
   document.getElementById('ag-hora').value = '';
   document.getElementById('ag-notas').value = '';
