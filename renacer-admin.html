@@ -104,7 +104,7 @@
       <div class="sub">Panel Admin</div>
       <nav>
         <button class="active" data-v="liquidacion" onclick="goView('liquidacion')">📊 Liquidación</button>
-        <button data-v="pacientes" onclick="goView('pacientes')">👤 Pacientes</button>
+        <button data-v="pacientes" onclick="goView('pacientes')">👤 Procesos</button>
       </nav>
       <button class="logout" onclick="doLogout()">Cerrar sesión</button>
     </div>
@@ -133,7 +133,7 @@
         <div class="detail-block" id="liq-detalle-block" style="display:none">
           <h3 id="liq-detalle-titulo">Detalle</h3>
           <table>
-            <thead><tr><th>Fecha</th><th>Tipo de sesión</th><th>Paciente</th><th>Convenio</th><th>Horas</th></tr></thead>
+            <thead><tr><th>Fecha</th><th>Tipo de sesión</th><th>Proceso</th><th>Convenio</th><th>Horas</th></tr></thead>
             <tbody id="liq-detalle-tabla"></tbody>
           </table>
         </div>
@@ -141,12 +141,12 @@
 
       <!-- PACIENTES -->
       <div class="view" id="view-pacientes">
-        <h2>Pacientes</h2>
-        <div class="sub-h">Alta, edición y baja de pacientes de la fundación</div>
+        <h2>Procesos</h2>
+        <div class="sub-h">Alta, edición y baja de procesos de la fundación</div>
         <div class="toolbar">
           <input id="pac-buscar" placeholder="Buscar por nombre o cédula..." oninput="renderPacientesAdmin()" style="min-width:240px">
           <label style="font-size:13px;display:flex;align-items:center;gap:6px"><input type="checkbox" id="pac-mostrar-baja" onchange="renderPacientesAdmin()"> Mostrar dados de baja</label>
-          <button class="btn gold" onclick="abrirModalPaciente()">+ Nuevo paciente</button>
+          <button class="btn gold" onclick="abrirModalPaciente()">+ Nuevo proceso</button>
         </div>
         <table>
           <thead><tr><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Centro</th><th>Etapa</th><th>Convenio</th><th>Estado</th><th></th></tr></thead>
@@ -160,7 +160,7 @@
 <!-- MODAL PACIENTE -->
 <div class="modal-bg" id="modal-paciente-bg">
   <div class="modal">
-    <h2 id="modal-paciente-title">Nuevo paciente</h2>
+    <h2 id="modal-paciente-title">Nuevo proceso</h2>
     <input type="hidden" id="pac-id">
     <div class="grid2">
       <div class="field"><label>Nombre</label><input id="pac-nombre"></div>
@@ -289,6 +289,12 @@ function cargarLiquidacion(){
   }).catch(e => alert('Error al cargar: ' + e.message));
 }
 function verDetalleProfesional(nombre){
+  const block = document.getElementById('liq-detalle-block');
+  if(liqSeleccionUsuario === nombre && block.style.display === 'block'){
+    block.style.display = 'none';
+    liqSeleccionUsuario = null;
+    return;
+  }
   liqSeleccionUsuario = nombre;
   const datos = liqDataActual.filter(d => d.usuarioNombre === nombre).sort((a,b) => a.fecha.localeCompare(b.fecha));
   document.getElementById('liq-detalle-titulo').textContent = 'Detalle — ' + nombre;
@@ -298,7 +304,7 @@ function verDetalleProfesional(nombre){
       <td>${d.convenio === null || d.convenio === undefined ? '-' : (d.convenio ? '<span class="tag si">Sí</span>' : '<span class="tag no">No</span>')}</td>
       <td class="hrs">${d.horas}h</td>
     </tr>`).join('');
-  document.getElementById('liq-detalle-block').style.display = 'block';
+  block.style.display = 'block';
 }
 function exportarResumenExcel(){
   if(liqDataActual.length === 0){ alert('Primero cargá un mes con "Ver mes".'); return; }
@@ -314,7 +320,7 @@ function exportarResumenExcel(){
 function exportarDetalleExcel(){
   if(liqDataActual.length === 0){ alert('Primero cargá un mes con "Ver mes".'); return; }
   const filas = [...liqDataActual].sort((a,b) => a.usuarioNombre.localeCompare(b.usuarioNombre) || a.fecha.localeCompare(b.fecha))
-    .map(d => ({ Profesional:d.usuarioNombre, Fecha:d.fecha, 'Tipo de sesión':d.tipoSesion, Paciente:d.pacienteNombre || '-', Convenio: d.convenio===null||d.convenio===undefined?'-':(d.convenio?'Sí':'No'), Horas:d.horas }));
+    .map(d => ({ Profesional:d.usuarioNombre, Fecha:d.fecha, 'Tipo de sesión':d.tipoSesion, Proceso:d.pacienteNombre || '-', Convenio: d.convenio===null||d.convenio===undefined?'-':(d.convenio?'Sí':'No'), Horas:d.horas }));
   const ws = XLSX.utils.json_to_sheet(filas);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Detalle');
@@ -328,7 +334,7 @@ function exportarDetallePDF(){
   doc.setFontSize(10); doc.text('Mes: ' + document.getElementById('liq-mes').value, 14, 26);
   const filas = [...liqDataActual].sort((a,b) => a.usuarioNombre.localeCompare(b.usuarioNombre) || a.fecha.localeCompare(b.fecha))
     .map(d => [d.usuarioNombre, d.fecha, d.tipoSesion, d.pacienteNombre || '-', d.convenio===null||d.convenio===undefined?'-':(d.convenio?'Sí':'No'), String(d.horas)]);
-  doc.autoTable({ startY:32, head:[['Profesional','Fecha','Tipo','Paciente','Convenio','Horas']], body:filas, styles:{fontSize:8} });
+  doc.autoTable({ startY:32, head:[['Profesional','Fecha','Tipo','Proceso','Convenio','Horas']], body:filas, styles:{fontSize:8} });
   const total = liqDataActual.reduce((a,d)=>a+d.horas,0);
   doc.setFontSize(12); doc.text('Total fundación: ' + total + ' hs', 14, doc.lastAutoTable.finalY + 10);
   doc.save('liquidacion-detalle-' + document.getElementById('liq-mes').value + '.pdf');
@@ -340,7 +346,7 @@ function loadPacientes(){
     pacientesCache = snap.docs.map(d => ({ id:d.id, ...d.data() }));
     pacientesCache.sort((a,b) => (a.nombre||'').localeCompare(b.nombre||''));
     renderPacientesAdmin();
-  }, e => alert('No se pudieron cargar los pacientes: ' + e.message));
+  }, e => alert('No se pudieron cargar los procesos: ' + e.message));
 }
 function renderPacientesAdmin(){
   const q = document.getElementById('pac-buscar').value.toLowerCase();
@@ -351,7 +357,7 @@ function renderPacientesAdmin(){
     return (p.nombre+' '+p.apellido+' '+(p.cedula||'')).toLowerCase().includes(q);
   });
   const tabla = document.getElementById('pac-tabla');
-  if(lista.length === 0){ tabla.innerHTML = '<tr><td colspan="8"><div class="empty-msg">No hay pacientes para mostrar.</div></td></tr>'; return; }
+  if(lista.length === 0){ tabla.innerHTML = '<tr><td colspan="8"><div class="empty-msg">No hay procesos para mostrar.</div></td></tr>'; return; }
   tabla.innerHTML = lista.map(p => {
     const activo = p.activo !== false;
     return `<tr>
@@ -371,7 +377,7 @@ function renderPacientesAdmin(){
   }).join('');
 }
 function abrirModalPaciente(){
-  document.getElementById('modal-paciente-title').textContent = 'Nuevo paciente';
+  document.getElementById('modal-paciente-title').textContent = 'Nuevo proceso';
   ['pac-id','pac-nombre','pac-apellido','pac-cedula','pac-telefono','pac-ingreso','pac-refnombre','pac-reftelefono'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('pac-centro').value = 'Montevideo';
   document.getElementById('pac-etapa').value = 'Diagnóstico';
@@ -382,7 +388,7 @@ function abrirModalPaciente(){
 function editarPaciente(id){
   const p = pacientesCache.find(x => x.id === id);
   if(!p) return;
-  document.getElementById('modal-paciente-title').textContent = 'Editar paciente';
+  document.getElementById('modal-paciente-title').textContent = 'Editar proceso';
   document.getElementById('pac-id').value = p.id;
   document.getElementById('pac-nombre').value = p.nombre || '';
   document.getElementById('pac-apellido').value = p.apellido || '';
@@ -417,17 +423,17 @@ function guardarPaciente(){
   const id = document.getElementById('pac-id').value;
   const promise = id ? db.collection('pacientes').doc(id).update(data)
     : db.collection('pacientes').add({...data, usuario: currentUser.uid, createdAt: new Date().toISOString()});
-  promise.then(() => { cerrarModalPaciente(); toast('✅ Paciente guardado'); }).catch(e => alert('Error: ' + e.message));
+  promise.then(() => { cerrarModalPaciente(); toast('✅ Proceso guardado'); }).catch(e => alert('Error: ' + e.message));
 }
 function toggleBajaPaciente(id, estaActivo){
   const accion = estaActivo ? 'dar de baja' : 'reactivar';
-  if(!confirm(`¿Confirmás ${accion} a este paciente? Su historial de sesiones no se toca.`)) return;
+  if(!confirm(`¿Confirmás ${accion} a este proceso? Su historial de sesiones no se toca.`)) return;
   db.collection('pacientes').doc(id).update({ activo: !estaActivo })
-    .then(() => toast(estaActivo ? '✅ Paciente dado de baja' : '✅ Paciente reactivado'))
+    .then(() => toast(estaActivo ? '✅ Proceso dado de baja' : '✅ Proceso reactivado'))
     .catch(e => alert('Error: ' + e.message));
 }
 function eliminarPacienteDefinitivo(id){
-  if(!confirm('¿Eliminar definitivamente esta ficha? No se puede deshacer. Las sesiones ya registradas con este paciente NO se borran, solo la ficha.')) return;
+  if(!confirm('¿Eliminar definitivamente esta ficha? No se puede deshacer. Las sesiones ya registradas con este proceso NO se borran, solo la ficha.')) return;
   db.collection('pacientes').doc(id).delete().then(() => toast('🗑 Ficha eliminada')).catch(e => alert('Error: ' + e.message));
 }
 </script>
